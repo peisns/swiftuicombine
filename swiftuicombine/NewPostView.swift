@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct NewPostView: View {
     @State var caption = ""
     @Binding var tabIndex: Int
+    @State var selectedPhotoItem: PhotosPickerItem?
+    @State var postImage: Image?
     
     var body: some View {
         VStack {
@@ -27,12 +30,24 @@ struct NewPostView: View {
                 Spacer()
             }
             .padding(.horizontal)
+            PhotosPicker(selection: $selectedPhotoItem) {
+                if let postImage {
+                    postImage
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Image(systemName: "photo.on.rectangle")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 200, height: 200)
+                        .padding()
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newValue in
+                Task { self.postImage = await convertImage(item: newValue) }
+            }
             
-            Image(.imageDog)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(maxWidth: .infinity)
-
             TextField("문구를 작성하거나 설문을 추가하세요", text: $caption)
                 .padding()
             
@@ -50,6 +65,14 @@ struct NewPostView: View {
             .padding()
 
         }
+    }
+    
+    func convertImage(item: PhotosPickerItem?) async -> Image? {
+        guard let item,
+              let image = try? await item.loadTransferable(type: Image.self) else {
+            return nil
+        }
+        return image
     }
 }
 

@@ -9,10 +9,10 @@ import SwiftUI
 import PhotosUI
 
 struct NewPostView: View {
-    @State var caption = ""
+    
     @Binding var tabIndex: Int
-    @State var selectedPhotoItem: PhotosPickerItem?
-    @State var postImage: Image?
+    @State var viewModel = NewPostViewModel()
+    
     
     var body: some View {
         VStack {
@@ -30,31 +30,31 @@ struct NewPostView: View {
                 Spacer()
             }
             .padding(.horizontal)
-            PhotosPicker(selection: $selectedPhotoItem) {
-                if let postImage {
+            PhotosPicker(selection: $viewModel.selectedPhotoItem) {
+                if let postImage = viewModel.postImage {
                     postImage
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .scaledToFit()
                         .frame(maxWidth: .infinity)
                 } else {
                     Image(systemName: "photo.on.rectangle")
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .scaledToFit()
                         .frame(width: 200, height: 200)
                         .padding()
                 }
             }
-            .onChange(of: selectedPhotoItem) { _, newValue in
-                Task { self.postImage = await convertImage(item: newValue) }
+            .onChange(of: viewModel.selectedPhotoItem) { _, newValue in
+                Task { await viewModel.convertImage(item: newValue) }
             }
             
-            TextField("문구를 작성하거나 설문을 추가하세요", text: $caption)
+            TextField("문구를 작성하거나 설문을 추가하세요", text: $viewModel.caption)
                 .padding()
             
             Spacer()
             
             Button {
-                print("사진 공유")
+                Task { await viewModel.uploadPost() }
             } label: {
                 Text("공유")
                     .frame(width: 363, height: 42)
@@ -67,13 +67,6 @@ struct NewPostView: View {
         }
     }
     
-    func convertImage(item: PhotosPickerItem?) async -> Image? {
-        guard let item,
-              let image = try? await item.loadTransferable(type: Image.self) else {
-            return nil
-        }
-        return image
-    }
 }
 
 #Preview {

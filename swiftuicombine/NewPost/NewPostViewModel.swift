@@ -8,6 +8,16 @@
 import SwiftUI
 import PhotosUI
 import FirebaseStorage
+import Firebase
+import FirebaseFirestoreSwift
+
+struct Post: Codable {
+    let id: String
+    let caption: String
+    var like: Int
+    let imageUrl: String
+    let date: Date
+}
 
 @Observable // @Observable로 내부의 변수 전부 감시 가능
 final class NewPostViewModel {
@@ -28,8 +38,22 @@ final class NewPostViewModel {
     }
     
     func uploadPost() async {
-        guard let uiImage else { return }
-        let url = await uploadImage(image: uiImage)
+        guard let uiImage,
+              let imageUrl = await uploadImage(image: uiImage) else {
+            return
+        }
+        
+        let postReference = Firestore.firestore().collection("post").document()
+        let post = Post(id: postReference.documentID, caption: caption
+                        , like: 0, imageUrl: imageUrl, date: Date())
+        do {
+            let encodedData = try Firestore.Encoder().encode(post)
+            try await postReference.setData(encodedData)
+        } catch {
+            
+        }
+        
+        
     }
     
     func uploadImage(image: UIImage) async -> String? {
